@@ -1,30 +1,37 @@
-# 1. Perform Text Preprocessing on SMSSpamCollection Dataset. The dataset can be downloaded from https://www.kaggle.com/datasets
-
 import pandas as pd
-import re
-from sklearn.model_selection import train_test_split
-from sklearn.feature_extraction.text import CountVectorizer
+import string
+import nltk
+from nltk.corpus import stopwords
+from nltk.stem import PorterStemmer
 
-sms = pd.read_csv("D:/Development/Wipro_TalentNext_Python/datasets/spam.csv",
-                  sep='\t', header=None, names=['Label', 'Message'])
+nltk.download('stopwords')
 
-sms['Label'] = sms['Label'].map({'ham': 0, 'spam': 1})
-
-def preprocess_text(text):
-    text = text.lower()
-    text = re.sub(r'[^a-z0-9\s]', '', text)
-    text = re.sub(r'\s+', ' ', text).strip()
-    return text
-
-sms['Message'] = sms['Message'].apply(preprocess_text)
-
-X_train, X_test, y_train, y_test = train_test_split(
-    sms['Message'], sms['Label'], test_size=0.2, random_state=42
+# Load dataset, but keep only first two columns
+df = pd.read_csv(
+    "D:/Development/Wipro_TalentNext_Python/datasets/spam.csv", 
+    encoding='latin-1',
+    usecols=[0, 1],         # take only the first 2 columns
+    names=['label', 'message'], 
+    skiprows=1              # skip the first row (header mess)
 )
 
-vectorizer = CountVectorizer()
-X_train_vec = vectorizer.fit_transform(X_train)
-X_test_vec = vectorizer.transform(X_test)
+# Ensure all messages are strings
+df['message'] = df['message'].astype(str)
 
-print("Sample preprocessed messages:")
-print(X_train_vec[:5])
+# Lowercase
+df['message'] = df['message'].str.lower()
+
+# Remove punctuation
+df['message'] = df['message'].apply(lambda x: x.translate(str.maketrans('', '', string.punctuation)))
+
+# Remove stopwords
+stop_words = set(stopwords.words('english'))
+df['message'] = df['message'].apply(lambda x: ' '.join([word for word in x.split() if word not in stop_words]))
+
+# Stemming
+ps = PorterStemmer()
+df['message'] = df['message'].apply(lambda x: ' '.join([ps.stem(word) for word in x.split()]))
+
+# Show clean data
+print(df.sample(5))
+print(df.head(10))
